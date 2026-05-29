@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <title>浚鍵管理 - 紅van通（完整整合版）</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* ===== 完整CSS樣式 ===== */
+        * { margin:0; padding:0; box-sizing:border-box; font-family: system-ui, -apple-system, 'PingFang TC', 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color:rgba(255,255,255,0); }
+        html,body { height:100%; width:100%; background:#fff; -webkit-overflow-scrolling:touch; overflow-scrolling:touch; }
+        body { display:flex; flex-direction:column; padding-top: env(safe-area-inset-top,0px); padding-bottom: env(safe-area-inset-bottom,0px); }
+
+        .company-bar { background:#7B1818; padding:0.3rem 1rem; text-align:center; font-size:0.8rem; color:#fff; letter-spacing:1px; padding-left:calc(1rem + env(safe-area-inset-left,0px)); padding-right:calc(1rem + env(safe-area-inset-right,0px)); border-bottom:1px solid rgba(255,255,255,0.15); }
+        .company-bar span { opacity:0.9; }
+
+        .role-bar { background:#7B1818; display:flex; justify-content:center; align-items:center; gap:0.5rem; padding:0.5rem 1rem; padding-left:calc(1rem + env(safe-area-inset-left,0px)); padding-right:calc(1rem + env(safe-area-inset-right,0px)); }
+        .role-btn { background:#F5C518; color:#7B1818; border:none; border-radius:25px; padding:0.6rem 1.2rem; font-size:1rem; font-weight:bold; cursor:pointer; transition:0.2s; flex:1; max-width:120px; min-height:48px; }
+        .role-btn.active { background:#fff; color:#7B1818; box-shadow:0 0 0 2px #F5C518; }
+        .role-btn:active { transform:scale(0.96); opacity:0.8; }
+        .fullscreen-btn { background: #F5C518; color: #7B1818; border: none; border-radius: 25px; padding: 0.6rem 1.2rem; font-size: 1rem; font-weight: bold; cursor: pointer; min-height: 48px; flex: 1; max-width: 120px; transition: 0.2s; position: static; box-shadow: none; z-index: auto; display: flex; align-items: center; justify-content: center; }
+        .fullscreen-btn:active { transform: scale(0.96); opacity: 0.8; }
+
+        .page { display:none; height:100%; flex-direction:column; }
+        .page.active { display:flex; }
+
+        .top-bar { background:#7B1818; color:#fff; padding:0.8rem 1rem; font-size:1.2rem; font-weight:bold; display:flex; align-items:center; gap:0.5rem; padding-left:calc(1rem + env(safe-area-inset-left,0px)); padding-right:calc(1rem + env(safe-area-inset-right,0px)); }
+        .top-bar .home-icon { background:transparent; color:#fff; border:none; font-size:1.5rem; cursor:pointer; min-height:44px; min-width:44px; display:flex; align-items:center; justify-content:center; border-radius:8px; transition:0.2s; }
+        .top-bar .home-icon:active { background:rgba(255,255,255,0.2); }
+        .top-bar span { flex:1; }
+
+        .driver-status-display { background:#F5F5F5; padding:0.4rem 1rem; display:flex; align-items:center; gap:0.5rem; border-bottom:1px solid #ddd; font-size:0.9rem; color:#333; }
+        .driver-status-display .status-badge { display:inline-block; padding:0.2rem 0.8rem; border-radius:15px; font-weight:bold; font-size:0.85rem; color:#fff; }
+        .driver-status-display .status-badge.business { background:#2E7D32; }
+        .driver-status-display .status-badge.off { background:#555; }
+        .driver-status-display .status-badge.food { background:#FF8C00; }
+        .driver-status-display .status-badge.garage { background:#1976D2; }
+        .driver-status-display .status-badge.fuel { background:#F5C518; color:#7B1818; }
+
+        .seat-info-display { background:#fff; padding:0.5rem 1rem; display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #7B1818; font-size:0.95rem; font-weight:bold; }
+        .seat-info-display .seat-count { display:flex; align-items:center; gap:0.5rem; }
+        .seat-info-display .seat-count .num { font-size:1.3rem; color:#7B1818; }
+        .seat-info-display .seat-count .total { color:#888; font-size:0.85rem; }
+        .seat-info-display .full-badge { background:#f44336; color:#fff; padding:0.2rem 0.8rem; border-radius:15px; font-size:0.85rem; display:none; }
+        .seat-info-display .full-badge.active { display:inline-block; }
+        .seat-info-display .available-badge { background:#4CAF50; color:#fff; padding:0.2rem 0.8rem; border-radius:15px; font-size:0.85rem; }
+        .seat-info-display .update-time { font-size:0.75rem; color:#888; font-weight:normal; }
+
+        .location-share-bar { background:#E8F5E9; padding:0.4rem 1rem; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #A5D6A7; font-size:0.85rem; flex-wrap:wrap; gap:0.3rem; }
+        .location-share-bar .share-status { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; }
+        .location-share-bar .share-status .status-indicator { display:inline-block; width:12px; height:12px; border-radius:50%; transition:0.3s; }
+        .location-share-bar .share-status .status-indicator.green { background:#4CAF50; box-shadow:0 0 6px #4CAF50; }
+        .location-share-bar .share-status .status-indicator.gray { background:#bbb; }
+        .location-share-bar .share-btn { background:#4CAF50; color:#fff; border:none; border-radius:20px; padding:0.3rem 1rem; font-size:0.85rem; font-weight:bold; cursor:pointer; min-height:36px; display:flex; align-items:center; gap:0.3rem; }
+        .location-share-bar .share-btn:active { background:#388E3C; }
+        .location-share-bar .share-btn.sharing { background:#f44336; }
+        .location-share-bar .share-btn.sharing:active { background:#d32f2f; }
+        .location-share-bar .share-btn:disabled { background:#bbb; cursor:not-allowed; }
+        .location-share-bar .share-accuracy { font-size:0.75rem; color:#666; }
+        .location-share-bar .share-address { font-size:0.8rem; color:#333; max-width:60%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+        .location-share-bar .last-update { font-size:0.7rem; color:#888; }
+        .location-share-bar .help-btn { background:transparent; color:#7B1818; border:1px solid #7B1818; border-radius:15px; padding:0.2rem 0.6rem; font-size:0.75rem; cursor:pointer; min-height:28px; }
+
+        .driver-distance-bar { background:#FFF8E1; padding:0.3rem 1rem; display:flex; align-items:center; gap:0.5rem; border-bottom:1px solid #FFE082; font-size:0.85rem; color:#7B1818; }
+        .driver-distance-bar .dist-value { font-weight:bold; font-size:0.95rem; }
+
+        #map { flex:1; width:100%; min-height:200px; z-index:1; position:relative; }
+        .bottom-panel { background:#7B1818; padding:0.8rem 1rem; padding-bottom:calc(0.8rem + env(safe-area-inset-bottom,0px)); display:flex; flex-wrap:wrap; justify-content:center; gap:0.6rem; box-shadow:0 -4px 12px rgba(0,0,0,0.15); z-index:2; flex-direction:column; }
+        .whatsapp-btn { background:#F5C518; color:#7B1818; border:none; border-radius:30px; padding:0.6rem 1rem; font-size:0.95rem; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:0.3rem; box-shadow:0 2px 6px rgba(0,0,0,0.2); transition:0.2s; flex:1; min-width:70px; justify-content:center; min-height:48px; }
+        .whatsapp-btn:active { background:#e0a800; transform:scale(0.96); }
+        .group-row { display:flex; flex-wrap:wrap; justify-content:center; gap:0.5rem; width:100%; }
+
+        .route-select-btn { 
+            background:#fff; color:#7B1818; border:2px solid #F5C518; border-radius:30px; padding:0.6rem 1rem; font-size:0.85rem; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:0.3rem; transition:0.2s; flex:1; min-width:70px; justify-content:center; min-height:48px; box-shadow:0 2px 6px rgba(0,0,0,0.1); line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; 
+            pointer-events: auto !important;
+            position: relative;
+            z-index: 10;
+        }
+        .route-select-btn:active { background:#F5C518; transform:scale(0.96); }
+        .route-select-btn.selected { background:#F5C518; color:#7B1818; border-color:#7B1818; font-weight:bold; }
+
+        .route-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center; padding:1rem; }
+        .route-modal.active { display:flex; }
+        .route-modal-content { background:#fff; border-radius:15px; padding:1.5rem; max-width:400px; width:100%; max-height:80vh; overflow-y:auto; box-shadow:0 4px 20px rgba(0,0,0,0.3); }
+        .route-modal-content h3 { color:#7B1818; margin-bottom:1rem; font-size:1.2rem; text-align:center; }
+        .route-option { background:#f5f5f5; border:2px solid #eee; border-radius:12px; padding:0.8rem; margin-bottom:0.5rem; cursor:pointer; transition:0.2s; display:flex; align-items:center; gap:0.8rem; }
+        .route-option:active { background:#e0e0e0; transform:scale(0.98); }
+        .route-option.selected { border-color:#F5C518; background:#FFF8E1; }
+        .route-option .route-icon { font-size:1.5rem; min-width:40px; text-align:center; }
+        .route-option .route-info { flex:1; }
+        .route-option .route-name { font-weight:bold; color:#7B1818; font-size:1rem; }
+        .route-option .route-desc { font-size:0.85rem; color:#666; margin-top:0.2rem; }
+        .route-option .check-mark { font-size:1.2rem; color:#F5C518; display:none; }
+        .route-option.selected .check-mark { display:block; }
+        .route-modal-close-btn { background:#7B1818; color:#fff; border:none; border-radius:25px; padding:0.6rem 1.5rem; font-size:1rem; font-weight:bold; cursor:pointer; width:100%; margin-top:1rem; min-height:44px; }
+        .route-modal-close-btn:active { background:#A52A2A; }
+
+        .driver-container { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+        .driver-status-bar { background:#7B1818; display:flex; flex-wrap:wrap; justify-content:center; gap:0.3rem; padding:0.5rem 0.8rem; padding-left:calc(0.8rem + env(safe-area-inset-left,0px)); padding-right:calc(0.8rem + env(safe-area-inset-right,0px)); }
+        .status-btn { background:#F5C518; color:#7B1818; border:none; border-radius:25px; padding:0.4rem 0.9rem; font-size:0.8rem; font-weight:bold; cursor:pointer; transition:0.2s; flex:1; min-width:60px; min-height:40px; }
+        .status-btn.active { background:#fff; color:#7B1818; box-shadow:inset 0 0 0 2px #F5C518; }
+        .status-btn.business.active { background:#2E7D32; color:#fff; }
+        .status-btn.off.active { background:#555; color:#fff; }
+        .status-btn.food.active { background:#FF8C00; color:#fff; }
+        .status-btn.garage.active { background:#1976D2; color:#fff; }
+        .status-btn.fuel.active { background:#F5C518; color:#7B1818; }
+        .driver-map-area { flex:1; position:relative; display:flex; flex-direction:column; }
+        #driverMap { height:100%; width:100%; min-height:200px; flex:1; }
+
+        .driver-passenger-info { background:#E8F5E9; padding:0.3rem 0.8rem; display:flex; align-items:center; gap:0.5rem; border-bottom:1px solid #A5D6A7; font-size:0.85rem; min-height:40px; flex-wrap:wrap; }
+        .driver-passenger-info .pax-count { font-weight:bold; color:#2E7D32; }
+        .driver-passenger-info .pax-distance { color:#555; }
+
+        .driver-controls { background:#fff; padding:0.5rem 0.8rem; display:flex; flex-wrap:wrap; align-items:center; gap:0.3rem; border-top:2px solid #7B1818; padding-bottom:calc(0.5rem + env(safe-area-inset-bottom,0px)); }
+        .driver-controls .seat-selector button { background:#F5C518; color:#7B1818; border:none; border-radius:8px; padding:0.4rem 0.8rem; font-weight:bold; cursor:pointer; min-height:40px; }
+        .driver-controls .seat-selector button.active { background:#7B1818; color:#fff; }
+        .driver-controls .counter { font-size:1.4rem; font-weight:bold; color:#7B1818; min-width:2.5rem; text-align:center; }
+        .driver-controls .counter-btn { background:#F5C518; color:#7B1818; border:none; border-radius:50%; width:2.5rem; height:2.5rem; font-size:1.2rem; font-weight:bold; cursor:pointer; }
+        .driver-controls .counter-btn:active { background:#e0a800; }
+        .driver-controls .full-btn { background:#7B1818; color:#fff; border:none; border-radius:8px; padding:0.4rem 0.8rem; font-weight:bold; cursor:pointer; min-height:40px; }
+        .driver-controls .full-btn.active { background:#A52A2A; }
+        .driver-controls .reset-btn { background:#F5C518; color:#7B1818; border:none; border-radius:8px; padding:0.4rem 0.8rem; font-weight:bold; cursor:pointer; min-height:40px; }
+
+        .driver-location-share { background:#f5f5f5; padding:0.4rem 0.8rem; display:flex; align-items:center; justify-content:space-between; border-top:1px solid #ddd; font-size:0.85rem; flex-wrap:wrap; gap:0.3rem; }
+        .driver-location-share .share-label { display:flex; align-items:center; gap:0.3rem; color:#333; }
+        .driver-location-share .share-label .status-indicator { display:inline-block; width:10px; height:10px; border-radius:50%; transition:0.3s; }
+        .driver-location-share .share-label .status-indicator.green { background:#4CAF50; box-shadow:0 0 4px #4CAF50; }
+        .driver-location-share .share-label .status-indicator.gray { background:#bbb; }
+        .driver-location-share .share-toggle-btn { background:#4CAF50; color:#fff; border:none; border-radius:20px; padding:0.3rem 1rem; font-size:0.85rem; font-weight:bold; cursor:pointer; min-height:36px; display:flex; align-items:center; gap:0.3rem; transition:0.2s; }
+        .driver-location-share .share-toggle-btn:active { background:#388E3C; }
+        .driver-location-share .share-toggle-btn.active { background:#f44336; }
+        .driver-location-share .share-toggle-btn.active:active { background:#d32f2f; }
+        .driver-location-share .share-status-text { font-size:0.75rem; color:#666; }
+        .driver-location-share .last-update { font-size:0.7rem; color:#888; }
+        .driver-location-share .help-btn { background:transparent; color:#7B1818; border:1px solid #7B1818; border-radius:15px; padding:0.2rem 0.6rem; font-size:0.75rem; cursor:pointer; min-height:28px; }
+
+        .driver-nav { background:#7B1818; display:flex; justify-content:space-around; padding:0.5rem 0; padding-bottom:calc(0.5rem + env(safe-area-inset-bottom,0px)); }
+        .driver-nav button { background:transparent; color:#fff; border:none; font-size:0.9rem; font-weight:bold; padding:0.4rem 0.8rem; cursor:pointer; border-radius:8px; flex:1; min-height:44px; }
+        .driver-nav button.active { background:#F5C518; color:#7B1818; }
+
+        .route-page { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; background:#f5f5f5; display:flex; flex-direction:column; }
+        .route-page .route-content { padding:0.8rem; }
+        .route-page h3 { color:#7B1818; margin:0.8rem 0 0.3rem; font-size:1.1rem; }
+        .route-card { background:#fff; border:2px solid #F5C518; border-radius:10px; padding:0.8rem; margin-bottom:0.8rem; }
+        .route-card .route-name { font-weight:bold; color:#7B1818; font-size:1rem; }
+        .route-card .route-actions { display:flex; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap; }
+        .route-card .route-actions button { background:#F5C518; color:#7B1818; border:none; border-radius:6px; padding:0.4rem 0.8rem; font-weight:bold; cursor:pointer; min-height:40px; }
+        .route-card .route-actions button:active { background:#e0a800; }
+        .route-input { width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:6px; margin-bottom:0.4rem; font-size:1rem; }
+        .route-input:focus { border-color:#F5C518; outline:none; }
+
+        .msg-page { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:0.8rem; background:#f5f5f5; }
+        .msg-top-bar { background:#7B1818; padding:0.6rem 1rem; display:flex; align-items:center; gap:0.8rem; border-radius:10px 10px 0 0; margin-bottom:0.6rem; }
+        .msg-top-bar h3 { color:#fff; margin:0; font-size:1.1rem; flex:1; text-align:center; }
+        .back-home-btn { background:#F5C518; color:#7B1818; border:none; border-radius:8px; padding:0.5rem 1rem; font-size:0.95rem; font-weight:bold; cursor:pointer; min-height:48px; min-width:48px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.2); transition:0.2s; }
+        .back-home-btn:active { background:#e0a800; transform:scale(0.96); }
+
+        /* ===== Zello PTT 對講樣式 ===== */
+        .zello-ptt-section { width:100%; margin-top:0.3rem; border-top:1px solid rgba(255,255,255,0.3); padding-top:0.4rem; }
+        .zello-ptt-btn, .zello-ptt-btn-driver { transition:0.2s; }
+        .zello-ptt-btn:active, .zello-ptt-btn-driver:active { transform:scale(0.95); opacity:0.8; }
+        .zello-driver-console { background:#FFF3E0; padding:0.4rem 0.6rem; border-bottom:2px solid #FF9800; }
+        .ptt-recording { animation:pulse 0.8s infinite; }
+        @keyframes pulse { 0% { opacity:1; } 50% { opacity:0.7; } 100% { opacity:1; } }
+
+        /* ===== ☕ 贊助提示樣式 ===== */
+        .coffee-banner {
+            background: linear-gradient(135deg, #FFF8E1 0%, #FFECB3 100%);
+            border: 1px solid #FFE082;
+            border-radius: 12px;
+            padding: 0.8rem;
+            margin: 0.4rem 0.6rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .coffee-banner:active { transform: scale(0.98); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+        .coffee-banner .coffee-icon { font-size: 2rem; min-width: 48px; text-align: center; }
+        .coffee-banner .coffee-text { flex: 1; }
+        .coffee-banner .coffee-title { font-weight: bold; color: #7B1818; font-size: 0.95rem; }
+        .coffee-banner .coffee-fps { font-size: 0.85rem; color: #555; margin-top: 0.2rem; }
+        .coffee-banner .coffee-fps span { color: #E65100; font-weight: bold; font-size: 1rem; }
+        .coffee-banner .coffee-desc { font-size: 0.75rem; color: #888; margin-top: 0.2rem; }
+        .coffee-banner .coffee-close { 
+            background: rgba(0,0,0,0.1); 
+            border: none; 
+            border-radius: 50%; 
+            width: 28px; 
+            height: 28px; 
+            font-size: 0.8rem; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            color: #888;
+            flex-shrink: 0;
+        }
+        .coffee-banner .coffee-close:active { background: rgba(0,0,0,0.2); }
+        
+        /* ☕ 懸浮贊助按鈕（右下角） */
+        .coffee-float-btn {
+            position: fixed;
+            bottom: 100px;
+            right: 16px;
+            z-index: 999;
+            background: #FF9800;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            font-size: 1.8rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: 0.3s;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .coffee-float-btn:active { transform: scale(0.9); }
+        .coffee-float-btn.show { display: flex; }
+        
+        /* ☕ 贊助彈窗 */
+        .coffee-modal { 
+            display: none; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.5); 
+            z-index: 10000; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 1rem; 
+        }
+        .coffee-modal.active { display: flex; }
+        .coffee-modal-content { 
+            background: #fff; 
+            border-radius: 20px; 
+            padding: 2rem 1.5rem; 
+            max-width: 360px; 
+            width: 100%; 
+            text-align: center; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3); 
+            position: relative;
+        }
+        .coffee-modal-content .big-icon { font-size: 4rem; margin-bottom: 0.5rem; }
+        .coffee-modal-content h3 { color: #7B1818; font-size: 1.3rem; margin-bottom: 0.5rem; }
+        .coffee-modal-content p { color: #555; font-size: 0.95rem; margin-bottom: 1rem; line-height: 1.5; }
+        .coffee-modal-content .fps-number { 
+            background: #FFF8E1; 
+            border: 2px dashed #FF9800; 
+            border-radius: 12px; 
+            padding: 0.8rem; 
+            font-size: 1.5rem; 
+            font-weight: bold; 
+            color: #E65100; 
+            letter-spacing: 2px;
+            margin: 0.8rem 0;
+        }
+        .coffee-modal-content .copy-btn {
+            background: #FF9800;
+            color: #fff;
+            border: none;
+            border-radius: 25px;
+            padding: 0.6rem 1.5rem;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            min-height: 44px;
+            margin-top: 0.5rem;
+            transition: 0.2s;
+        }
+        .coffee-modal-content .copy-btn:active { background: #F57C00; transform: scale(0.96); }
+        .coffee-modal-content .close-modal-btn {
+            background: transparent;
+            color: #888;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            padding: 0.5rem 1.2rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-top: 0.8rem;
+            min-height: 40px;
+        }
+        .coffee-modal-content .close-modal-btn:active { background: #f5f5f5; }
+        .coffee-modal-content .bank-list {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        .admin-container { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:0.8rem; background:#f5f5f5; }
+        .admin-container h2 { color:#7B1818; margin-bottom:0.8rem; font-size:1.2rem; }
+        .admin-card { background:#fff; border-radius:10px; padding:0.8rem; margin-bottom:0.8rem; box-shadow:0 1px 4px rgba(0,0,0,0.1); }
+        .admin-card h3 { color:#7B1818; margin-bottom:0.5rem; font-size:1rem; }
+        .admin-table { width:100%; border-collapse:collapse; font-size:0.9rem; }
+        .admin-table th, .admin-table td { padding:0.5rem; text-align:left; border-bottom:1px solid #eee; }
+        .admin-table th { background:#7B1818; color:#fff; font-size:0.8rem; }
+        .admin-btn { background:#F5C518; color:#7B1818; border:none; border-radius:6px; padding:0.3rem 0.8rem; font-weight:bold; cursor:pointer; margin-right:0.3rem; min-height:36px; font-size:0.8rem; }
+        .admin-btn:active { background:#e0a800; }
+        .admin-btn.block { background:#A52A2A; color:#fff; }
+        .admin-btn.unblock { background:#2E7D32; color:#fff; }
+        .whatsapp-link-input { width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:6px; margin-bottom:0.4rem; font-size:1rem; }
+        .whatsapp-link-input:focus { border-color:#F5C518; outline:none; }
+        .save-btn { background:#F5C518; color:#7B1818; border:none; border-radius:8px; padding:0.6rem 1.2rem; font-weight:bold; cursor:pointer; margin-top:0.5rem; font-size:1rem; min-height:44px; }
+        .save-btn:active { background:#e0a800; }
+
+        .map-loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999; background: rgba(255,255,255,0.9); padding: 15px 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 14px; color: #7B1818; font-weight: bold; text-align: center; }
+        .map-loading.hidden { display: none; }
+
+        .diagnostic-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center; padding:1rem; }
+        .diagnostic-modal.active { display:flex; }
+        .diagnostic-content { background:#fff; border-radius:15px; padding:1.5rem; max-width:400px; width:100%; max-height:80vh; overflow-y:auto; box-shadow:0 4px 20px rgba(0,0,0,0.3); }
+        .diagnostic-content h3 { color:#7B1818; margin-bottom:1rem; font-size:1.2rem; text-align:center; }
+
+        .help-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center; padding:1rem; }
+        .help-modal.active { display:flex; }
+        .help-content { background:#fff; border-radius:15px; padding:1.5rem; max-width:400px; width:100%; max-height:80vh; overflow-y:auto; box-shadow:0 4px 20px rgba(0,0,0,0.3); }
+        .help-content h3 { color:#7B1818; margin-bottom:0.8rem; font-size:1.1rem; }
+        .help-close-btn { background:#7B1818; color:#fff; border:none; border-radius:25px; padding:0.6rem 1.5rem; font-size:1rem; font-weight:bold; cursor:pointer; width:100%; margin-top:1rem; min-height:44px; }
+
+        @media (max-width:360px) { .role-btn { font-size:0.85rem; padding:0.4rem 0.8rem; } .whatsapp-btn { font-size:0.8rem; padding:0.4rem 0.6rem; min-width:60px; } .status-btn { font-size:0.7rem; padding:0.3rem 0.6rem; min-width:50px; } .driver-controls .counter { font-size:1.2rem; min-width:2rem; } .top-bar { font-size:1rem; } .company-bar { font-size:0.7rem; } .fullscreen-btn { font-size:0.85rem; padding:0.4rem 0.8rem; } .route-select-btn { font-size:0.75rem; padding:0.4rem 0.5rem; } }
+        @media (min-width:414px) { .role-btn { font-size:1.1rem; } .whatsapp-btn { font-size:1rem; } .status-btn { font-size:0.9rem; } .company-bar { font-size:0.85rem; } .route-select-btn { font-size:0.9rem; } }
+        @media (min-width:768px) { body { max-width:480px; margin:0 auto; border-left:1px solid #eee; border-right:1px solid #eee; } }
+    </style>
+</head>
+<body>
+
+    <!-- ===== 公司資訊列 ===== -->
+    <div class="company-bar">
+        <span>浚鍵管理有限公司 版主持有者大輝</span>
+    </div>
+
+    <!-- ===== 角色切換欄 ===== -->
+    <div class="role-bar">
+        <button class="role-btn active" data-role="passenger">🚌 乘客</button>
+        <button class="role-btn" data-role="driver">🚐 司機</button>
+        <button class="role-btn" data-role="admin">⚙️ 版主</button>
+        <button class="fullscreen-btn" id="passengerFullscreen">⛶ 全螢幕</button>
+    </div>
+
+    <!-- ============================== -->
+    <!-- ===== 乘客頁面 ===== -->
+    <!-- ============================== -->
+    <div id="page-passenger" class="page active">
+        <div class="top-bar">
+            <button class="home-icon" onclick="goHome('passenger')">🏠</button>
+            <span id="passengerRouteDisplay">🚐 紅van通 · 元朗西鐵站→大棠黃泥墩</span>
+        </div>
+        <div class="driver-status-display" id="driverStatusDisplay">
+            <span>🚐 司機狀態：</span>
+            <span class="status-badge business" id="driverStatusBadge">🟢 做生意</span>
+            <span style="margin-left:0.5rem;font-size:0.85rem;color:#888;" id="passengerSelectedRouteDisplay"> | 路線：元朗西鐵站→大棠黃泥墩</span>
+        </div>
+        <div class="seat-info-display" id="seatInfoDisplay">
+            <div class="seat-count">
+                <span>🪑 座位：</span>
+                <span class="num" id="seatCountNum">0</span>
+                <span class="total">/ <span id="seatTotalNum">16</span></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+                <span class="available-badge" id="availableBadge">🟢 有位</span>
+                <span class="full-badge" id="fullBadge">🔴 滿座</span>
+                <span class="update-time" id="updateTime">剛剛</span>
+            </div>
+        </div>
+        <div class="location-share-bar" id="locationShareBar">
+            <div class="share-status">
+                <span class="status-indicator gray" id="shareStatusIndicator"></span>
+                <span id="shareStatusText">📍 位置共享已關閉</span>
+                <span class="share-accuracy" id="shareAccuracy"></span>
+                <span class="last-update" id="shareLastUpdate"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.3rem;flex-wrap:wrap;">
+                <span class="share-address" id="shareAddress"></span>
+                <button class="share-btn" id="shareLocationBtn" onclick="toggleLocationShare()">📤 分享位置</button>
+                <button class="help-btn" onclick="openHelpModal('passenger')">❓</button>
+            </div>
+        </div>
+        <div class="driver-distance-bar" id="driverDistanceBar" style="display:none;">
+            <span>🚐 司機位置：</span>
+            <span class="dist-value" id="driverDistValue">—</span>
+        </div>
+        <div id="map" style="position:relative;">
+            <div class="map-loading" id="mapLoading">⏳ 地圖加載中...</div>
+        </div>
+        <div class="bottom-panel">
+            <!-- ===== ☕ 贊助提示（乘客版） ===== -->
+            <div class="coffee-banner" id="coffeeBanner" onclick="openCoffeeModal()">
+                <div class="coffee-icon">☕</div>
+                <div class="coffee-text">
+                    <div class="coffee-title">覺得紅van通好用？請大輝飲杯咖啡！</div>
+                    <div class="coffee-fps">🔹 轉數快（FPS）：<span>95294026</span></div>
+                    <div class="coffee-desc">支援匯豐、中銀、渣打等所有FPS銀行</div>
+                </div>
+                <button class="coffee-close" onclick="event.stopPropagation();hideCoffeeBanner()">✕</button>
+            </div>
+            
+            <div class="group-row">
+                <button class="whatsapp-btn" data-link="https://chat.whatsapp.com/BAK4sPyQjDP61OXfTXxxdT">💬 A群</button>
+                <button class="whatsapp-btn" data-link="https://chat.whatsapp.com/KETS7BDFqE6EW2TCA8UH2T">💬 B群</button>
+                <button class="whatsapp-btn" data-link="https://chat.whatsapp.com/FGWXQ7MbxlpK9zxLp2Cxk4">💬 C群</button>
+                <button class="whatsapp-btn" data-link="https://chat.whatsapp.com/GJQxt5dxf2qJugAODTDB1M">💬 D群</button>
+                <button class="route-select-btn selected" id="routeSelectBtn" onclick="openRouteModal()">🗺️ 路線選擇 · 元朗西鐵站→大棠黃泥墩</button>
+            </div>
+            
+            <!-- ===== Zello PTT 對講按鈕（乘客版） ===== -->
+            <div class="zello-ptt-section" id="zelloPassengerPTT">
+                <div style="display:flex;gap:0.3rem;margin-bottom:0.3rem;flex-wrap:wrap;">
+                    <button class="zello-ptt-btn" data-channel="hongvan_A" 
+                        style="flex:1;min-width:70px;background:#FF9800;color:#fff;border:none;border-radius:25px;padding:0.6rem 0.5rem;font-size:0.8rem;font-weight:bold;cursor:pointer;min-height:48px;">
+                        🅰️ A群<br><small>按住講話</small>
+                    </button>
+                    <button class="zello-ptt-btn" data-channel="hongvan_B"
+                        style="flex:1;min-width:70px;background:#4CAF50;color:#fff;border:none;border-radius:25px;padding:0.6rem 0.5rem;font-size:0.8rem;font-weight:bold;cursor:pointer;min-height:48px;">
+                        🅱️ B群<br><small>按住講話</small>
+                    </button>
+                    <button class="zello-ptt-btn" data-channel="hongvan_C"
+                        style="flex:1;min-width:70px;background:#2196F3;color:#fff;border:none;border-radius:25px;padding:0.6rem 0.5rem;font-size:0.8rem;font-weight:bold;cursor:pointer;min-height:48px;">
+                        ©️ C群<br><small>按住講話</small>
+                    </button>
+                    <button class="zello-ptt-btn" data-channel="hongvan_D"
+                        style="flex:1;min-width:70px;background:#9C27B0;color:#fff;border:none;border-radius:25px;padding:0.6rem 0.5rem;font-size:0.8rem;font-weight:bold;cursor:pointer;min-height:48px;">
+                        🅳️ D群<br><small>按住講話</small>
+                    </button>
+                </div>
+                <div style="display:flex;gap:0.3rem;">
+                    <button class="zello-ptt-btn" data-channel="hongvan_all"
+                        style="flex:1;background:#f44336;color:#fff;border:none;border-radius:25px;padding:0.6rem 0.5rem;font-size:0.8rem;font-weight:bold;cursor:pointer;min-height:48px;">
+                        📢 全體廣播<br><small>按住講話</small>
+                    </button>
+                </div>
+                <div id="zelloStatusPassenger" style="font-size:0.7rem;color:#888;text-align:center;margin-top:0.2rem;">
+                    🎤 即時對講已就緒 | 按住講話 · 鬆手發送
+                </div>
+            </div>
+        </div>
+        <audio id="remoteAudio" autoplay style="display:none;"></audio>
+    </div>
+
+    <!-- ============================== -->
+    <!-- ===== 司機頁面 ===== -->
+    <!-- ============================== -->
+    <div id="page-driver" class="page">
+        <div class="top-bar">
+            <button class="home-icon" onclick="goHome('driver')">🏠</button>
+            <span>🚐 紅van通 · 司機</span>
+        </div>
+        <div class="driver-container">
+            <div class="driver-status-bar">
+                <button class="status-btn business active" data-status="business">🟢 做生意</button>
+                <button class="status-btn off" data-status="off">⚫ 收工</button>
+                <button class="status-btn food" data-status="food">🟠 食飯</button>
+                <button class="status-btn garage" data-status="garage">🔵 入車房</button>
+                <button class="status-btn fuel" data-status="fuel">🟡 去加油</button>
+            </div>
+            
+            <!-- ===== Zello PTT 對講控制台（司機版） ===== -->
+            <div class="zello-driver-console" id="zelloDriverPTT">
+                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.3rem;">
+                    <span style="font-weight:bold;color:#E65100;">📢 即時對講</span>
+                    <span id="zelloConnectionStatus" style="font-size:0.75rem;color:#4CAF50;">🟢 已連接</span>
+                </div>
+                <div style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-bottom:0.3rem;">
+                    <button class="zello-ptt-btn-driver" data-channel="hongvan_driver"
+                        style="flex:1;min-width:60px;background:#7B1818;color:#fff;border:none;border-radius:20px;padding:0.5rem 0.5rem;font-size:0.8rem;font-weight:bold;cursor:pointer;min-height:44px;">
+                        🚐 司機頻道<br><small>按住講話</small>
+                    </button>
+                    <button class="zello-ptt-btn-driver" data-channel="hongvan_A"
+                        style="flex:1;min-width:60px;background:#FF9800;color:#fff;border:none;border-radius:20px;padding:0.5rem 0.5rem;font-size:0.8rem;font-weight:bold;cursor:pointer;min-height:44px;">
+                        🅰️ A群<br><small>按住講話</small>
+                    </button>
+                    <button class="zello-ptt-btn-driver" data-channel="hongvan_B"
+                        style="flex:1;min-width:60px;background:#4CAF50;color:#fff;border:none;border-radius:20px;padding:0.5rem 0.5rem;font-size:0.8rem;font-weight:bold;cursor:pointer;min-height:44px;">
+                        🅱️ B群<br><small>按住講話</small>
+                    </button>
+                </div>
+                <div style="display:flex;gap:0.3rem;flex-wrap:wrap;">
+                    <button class="zello-ptt-btn-driver" data-channel="hongvan_C"
+                        style="flex:1;min-width:60px;background:#2196F3;color:#fff;border:none;border-radius:20px;padding:0.5rem 0.5rem;font-size:0.8rem;font-weight:bold;cursor:pointer;min-height:44px;">
+                        ©️ C群<br><small>按住講話</small>
+                    </button>
+                    <button class="zello-ptt-btn-driver" data-channel="hongvan_D"
+                        style="flex:1;min-width:60px;background:#9C27B0;color:#fff;border:none;border-radius:20px;padding:0.5rem 0.5rem;font-size:0.8rem;font-weight:bold;cursor:pointer;min-height:44px;">
+                        🅳️ D群<br><small>按住講話</small>
+                    </button>
+                    <button class="zello-ptt-btn-driver" data-channel="hongvan_all"
+                        style="flex:1;min-width:60px;background:#f44336;color:#fff;border:none;border-radius:20px;padding:0.5rem 0.5rem;font-size:0.8rem;font-weight:bold;cursor:pointer;min-height:44px;">
+                        📢 全體<br><small>按住講話</small>
+                    </button>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.3rem;">
+                    <div id="voiceHistoryDriver" style="flex:1;font-size:0.75rem;color:#555;max-height:40px;overflow-y:auto;">
+                        💬 語音記錄會顯示喺度
+                    </div>
+                    <button onclick="clearVoiceHistory()" style="background:transparent;color:#888;border:1px solid #ddd;border-radius:12px;padding:0.2rem 0.6rem;font-size:0.7rem;cursor:pointer;">清空</button>
+                </div>
+            </div>
+
+            <div class="driver-passenger-info" id="driverPassengerInfo">
+                <span style="color:#555;">📍 等候乘客：</span>
+                <span class="pax-count" id="paxCount">0 人</span>
+                <span style="color:#555;margin-left:0.5rem;">最近：</span>
+                <span id="nearestPax">—</span>
+            </div>
+            <div class="driver-map-area">
+                <div id="driverMap" style="position:relative;">
+                    <div class="map-loading" id="driverMapLoading">⏳ 地圖加載中...</div>
+                </div>
+                <div class="driver-controls">
+                    <div class="seat-selector">
+                        <button id="seat16" class="active" onclick="selectSeatCapacity(16)">16座</button>
+                        <button id="seat19" onclick="selectSeatCapacity(19)">19座</button>
+                    </div>
+                    <button class="counter-btn" onclick="decrementSeat()">−</button>
+                    <span class="counter" id="seatCounter">0</span>
+                    <button class="counter-btn" onclick="incrementSeat()">+</button>
+                    <button class="full-btn" id="fullBtn" onclick="toggleFull()">滿座</button>
+                    <button class="reset-btn" onclick="resetSeats()">🔁 歸零</button>
+                </div>
+            </div>
+            <div class="driver-location-share">
+                <div class="share-label">
+                    <span class="status-indicator gray" id="driverShareStatusIndicator"></span>
+                    <span>📍 位置分享</span>
+                    <span class="share-status-text" id="driverShareStatusText">已關閉</span>
+                    <span class="last-update" id="driverShareLastUpdate"></span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.3rem;flex-wrap:wrap;">
+                    <button class="share-toggle-btn" id="driverLocationShareBtn" onclick="toggleDriverLocationShare()" data-active="false">📤 分享位置</button>
+                    <button class="help-btn" onclick="openHelpModal('driver')">❓</button>
+                </div>
+            </div>
+            <div class="driver-nav">
+                <button class="active" data-driver-page="map">🗺️ 地圖</button>
+                <button data-driver-page="route">🚏 路線</button>
+                <button data-driver-page="msg">💬 通訊</button>
+                <button data-driver-page="home">🏠 主頁</button>
+            </div>
+        </div>
+        <div id="driverRoutePage" style="display:none;" class="route-page">
+            <div class="msg-top-bar">
+                <button class="back-home-btn" onclick="backToDriverHome()">← 返回主頁</button>
+                <h3>🚏 路線管理</h3>
+            </div>
+            <div class="route-content">
+                <h3>固定路線</h3>
+                <div class="route-card">
+                    <div class="route-name">① 元朗西鐵站 → 大棠黃泥墩</div>
+                    <div class="route-actions">
+                        <button onclick="swapRoute(0)">🔄 兌換</button>
+                        <button onclick="useRoute('元朗西鐵站','大棠黃泥墩')">✅ 使用</button>
+                    </div>
+                </div>
+                <div class="route-card">
+                    <div class="route-name">② 元朗西鐵站 → 水流田</div>
+                    <div class="route-actions">
+                        <button onclick="swapRoute(1)">🔄 兌換</button>
+                        <button onclick="useRoute('元朗西鐵站','水流田')">✅ 使用</button>
+                    </div>
+                </div>
+                <h3>自訂路線（可自由輸入）</h3>
+                <div id="customRoutes"></div>
+            </div>
+        </div>
+        <div id="driverMsgPage" style="display:none;" class="msg-page">
+            <div class="msg-top-bar">
+                <button class="back-home-btn" onclick="backToDriverHome()">← 返回主頁</button>
+                <h3>📢 即時通訊總覽</h3>
+            </div>
+            <div id="msgGroups"></div>
+        </div>
+    </div>
+
+    <!-- ============================== -->
+    <!-- ===== 版主頁面 ===== -->
+    <!-- ============================== -->
+    <div id="page-admin" class="page">
+        <div class="top-bar">
+            <button class="home-icon" onclick="goHome('admin')">🏠</button>
+            <span>⚙️ 紅van通 · 版主控制台</span>
+        </div>
+        <div class="admin-container">
+            <!-- ===== ☕ 贊助提示（版主版） ===== -->
+            <div class="coffee-banner" style="margin-bottom:1rem;" onclick="openCoffeeModal()">
+                <div class="coffee-icon">☕</div>
+                <div class="coffee-text">
+                    <div class="coffee-title">☕ 支持開發者 · 請大輝飲杯咖啡</div>
+                    <div class="coffee-fps">🔹 轉數快（FPS）：<span>95294026</span></div>
+                    <div class="coffee-desc">你的支持係我哋繼續改進嘅動力！</div>
+                </div>
+            </div>
+            
+            <div class="admin-card">
+                <h3>👤 司機管理</h3>
+                <table class="admin-table">
+                    <thead><tr><th>姓名</th><th>車牌</th><th>狀態</th><th>操作</th></tr></thead>
+                    <tbody id="driverTable">
+                        <tr><td>陳大文</td><td>AB1234</td><td>🟡 待審核</td><td><button class="admin-btn" onclick="approveDriver(this)">批准</button><button class="admin-btn block" onclick="blockDriver(this)">封鎖</button></td></tr>
+                        <tr><td>李小明</td><td>CD5678</td><td>🟢 已批准</td><td><button class="admin-btn block" onclick="blockDriver(this)">封鎖</button></td></tr>
+                        <tr><td>王國強</td><td>EF9012</td><td>🔴 被封鎖</td><td><button class="admin-btn unblock" onclick="unblockDriver(this)">撤銷</button></td></tr>
+                    </tbody>
+                </table>
+                <button class="admin-btn" onclick="alert('新增司機功能可擴展')">+ 新增司機</button>
+            </div>
+            <div class="admin-card">
+                <h3>📱 乘客管理</h3>
+                <p>乘客無需審批，但可封鎖濫用號碼。</p>
+                <div id="passengerList"><span style="color:#888;">暫無乘客資料</span></div>
+                <button class="admin-btn" onclick="alert('可擴展乘客列表')">查看所有乘客</button>
+            </div>
+            <div class="admin-card">
+                <h3>💬 WhatsApp群組設定</h3>
+                <label>A群連結：</label><input class="whatsapp-link-input" id="waA" value="https://chat.whatsapp.com/BAK4sPyQjDP61OXfTXxxdT">
+                <label>B群連結：</label><input class="whatsapp-link-input" id="waB" value="https://chat.whatsapp.com/KETS7BDFqE6EW2TCA8UH2T">
+                <label>C群連結：</label><input class="whatsapp-link-input" id="waC" value="https://chat.whatsapp.com/FGWXQ7MbxlpK9zxLp2Cxk4">
+                <label>D群連結：</label><input class="whatsapp-link-input" id="waD" value="https://chat.whatsapp.com/GJQxt5dxf2qJugAODTDB1M">
+                <button class="save-btn" onclick="saveWALinks()">💾 儲存群組連結</button>
+            </div>
+            <div class="admin-card">
+                <h3>⚙️ 系統設定</h3>
+                <p>預設座位數：<select id="defaultSeat"><option value="16">16</option><option value="19">19</option></select></p>
+                <button class="save-btn" onclick="saveSettings()">💾 儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ☕ 贊助彈窗 ===== -->
+    <div class="coffee-modal" id="coffeeModal">
+        <div class="coffee-modal-content">
+            <div class="big-icon">☕</div>
+            <h3>請大輝飲杯咖啡</h3>
+            <p>如果你覺得呢個App好用，可以請大輝飲杯咖啡，支持我哋繼續改進！</p>
+            <div class="fps-number" id="fpsDisplay">95294026</div>
+            <button class="copy-btn" onclick="copyFPS()">📋 複製轉數快號碼</button>
+            <div class="bank-list">
+                💳 支援銀行：匯豐銀行 · 中銀香港 · 渣打銀行 · 恒生銀行 · 所有FPS銀行
+            </div>
+            <button class="close-modal-btn" onclick="closeCoffeeModal()">唔該晒，下次先</button>
+        </div>
+    </div>
+
+    <!-- ===== ☕ 懸浮贊助按鈕 ===== -->
+    <button class="coffee-float-btn" id="coffeeFloatBtn" onclick="openCoffeeModal()">☕</button>
+
+    <!-- ===== 路線選擇彈窗 ===== -->
+    <div class="route-modal" id="routeModal">
+        <div class="route-modal-content">
+            <h3>🗺️ 選擇你嘅路線</h3>
+            <div id="routeOptions">
+                <div class="route-option selected" data-route="元朗-大棠" data-start="元朗西鐵站" data-end="大棠黃泥墩" onclick="selectRoute(this)">
+                    <div class="route-icon">🚌</div>
+                    <div class="route-info">
+                        <div class="route-name">元朗西鐵站 → 大棠黃泥墩</div>
+                        <div class="route-desc">途經：元朗廣場、千色店、教育路、大棠路</div>
+                    </div>
+                    <div class="check-mark">✓</div>
+                </div>
+                <div class="route-option" data-route="元朗-水流田" data-start="元朗西鐵站" data-end="水流田" onclick="selectRoute(this)">
+                    <div class="route-icon">🚌</div>
+                    <div class="route-info">
+                        <div class="route-name">元朗西鐵站 → 水流田</div>
+                        <div class="route-desc">途經：元朗廣場、大棠路、黃泥墩</div>
+                    </div>
+                    <div class="check-mark">✓</div>
+                </div>
+                <div class="route-option" data-route="元朗-大棠" data-start="元朗又新街" data-end="大棠山道" onclick="selectRoute(this)">
+                    <div class="route-icon">🚌</div>
+                    <div class="route-info">
+                        <div class="route-name">元朗又新街 → 大棠山道</div>
+                        <div class="route-desc">途經：元朗大馬路、大棠路、大棠村</div>
+                    </div>
+                    <div class="check-mark">✓</div>
+                </div>
+                <div class="route-option" data-route="元朗-洪水橋" data-start="元朗西鐵站" data-end="洪水橋" onclick="selectRoute(this)">
+                    <div class="route-icon">🚌</div>
+                    <div class="route-info">
+                        <div class="route-name">元朗西鐵站 → 洪水橋</div>
+                        <div class="route-desc">途經：元朗廣場、朗屏、屏山</div>
+                    </div>
+                    <div class="check-mark">✓</div>
+                </div>
+                <div class="route-option" data-route="天水圍-元朗" data-start="天水圍站" data-end="元朗千色店" onclick="selectRoute(this)">
+                    <div class="route-icon">🚌</div>
+                    <div class="route-info">
+                        <div class="route-name">天水圍站 → 元朗千色店</div>
+                        <div class="route-desc">途經：天耀邨、天瑞邨、元朗大馬路</div>
+                    </div>
+                    <div class="check-mark">✓</div>
+                </div>
+            </div>
+            <button class="route-modal-close-btn" id="routeModalConfirmBtn" onclick="confirmRouteSelection()">✅ 確認選擇</button>
+        </div>
+    </div>
+
+    <!-- ===== 幫助彈窗 ===== -->
+    <div class="help-modal" id="helpModal">
+        <div class="help-content">
+            <h3>❓ 位置分享疑難排解</h3>
+            <div id="helpContent"></div>
+            <button class="help-close-btn" onclick="closeHelpModal()">了解，關閉</button>
+        </div>
+    </div>
+
+    <!-- ===== JavaScript ===== -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+    // ====================================================================
+    // ===== 紅van通 - 完整JavaScript（保留所有功能 + 贊助功能 + PTT） =====
+    // ====================================================================
+
+    // ===== 全域變數 =====
+    let passengerMap = null, driverMap = null;
+    let seatCount = 0, seatCapacity = 16;
+    let isFull = false;
+    let currentRouteStart = '元朗西鐵站', currentRouteEnd = '大棠黃泥墩';
+    let currentDriverStatus = 'business';
+    let isFullScreen = false;
+    let passengerMapInitialized = false;
+    let driverMapInitialized = false;
+    let passengerSelectedRoute = { name: '元朗-大棠', start: '元朗西鐵站', end: '大棠黃泥墩' };
+    let routeMapMarkers = [];
+
+    // 位置共享變數
+    let isSharingLocation = false;
+    let watchPositionId = null;
+    let currentPosition = null;
+    let passengerMarkerOnPassengerMap = null;
+    let passengerCircleOnPassengerMap = null;
+    let isDriverSharingLocation = false;
+    let driverWatchId = null;
+    let driverMarkerOnPassengerMap = null;
+    let driverCircleOnPassengerMap = null;
+    let driverMarkerOnDriverMap = null;
+
+    // WhatsApp群組連結
+    const waLinks = {
+        A:'https://chat.whatsapp.com/BAK4sPyQjDP61OXfTXxxdT',
+        B:'https://chat.whatsapp.com/KETS7BDFqE6EW2TCA8UH2T',
+        C:'https://chat.whatsapp.com/FGWXQ7MbxlpK9zxLp2Cxk4',
+        D:'https://chat.whatsapp.com/GJQxt5dxf2qJugAODTDB1M'
+    };
+
+    // ===== Zello PTT 對講變數 =====
+    let localStream = null;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isPTTRecording = false;
+    let pttChannelMap = {
+        'hongvan_A': { name: 'A群', color: '#FF9800' },
+        'hongvan_B': { name: 'B群', color: '#4CAF50' },
+        'hongvan_C': { name: 'C群', color: '#2196F3' },
+        'hongvan_D': { name: 'D群', color: '#9C27B0' },
+        'hongvan_all': { name: '全體廣播', color: '#f44336' },
+        'hongvan_driver': { name: '司機頻道', color: '#7B1818' }
+    };
+
+    // ====================================================================
+    // ===== ☕ 贊助功能 =====
+    // ====================================================================
+    
+    /**
+     * 打開贊助彈窗
+     */
+    function openCoffeeModal() {
+        document.getElementById('coffeeModal').classList.add('active');
+        // 隱藏懸浮按鈕
+        document.getElementById('coffeeFloatBtn').classList.remove('show');
+    }
+    
+    /**
+     * 關閉贊助彈窗
+     */
+    function closeCoffeeModal() {
+        document.getElementById('coffeeModal').classList.remove('active');
+        // 5秒後顯示懸浮按鈕
+        setTimeout(function() {
+            if (!document.getElementById('coffeeBanner').style.display || document.getElementById('coffeeBanner').style.display !== 'none') {
+                // 如果banner顯示中，唔顯示懸浮按鈕
+            } else {
+                document.getElementById('coffeeFloatBtn').classList.add('show');
+            }
+        }, 5000);
+    }
+    
+    /**
+     * 隱藏贊助橫幅
+     */
+    function hideCoffeeBanner() {
+        document.getElementById('coffeeBanner').style.display = 'none';
+        // 顯示懸浮按鈕
+        document.getElementById('coffeeFloatBtn').classList.add('show');
+    }
+    
+    /**
+     * 複製轉數快號碼
+     */
+    function copyFPS() {
+        const fpsNumber = '95294026';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(fpsNumber).then(function() {
+                alert('✅ 已複製轉數快號碼：' + fpsNumber + '\n多謝支持！☕');
+            }).catch(function() {
+                fallbackCopy(fpsNumber);
+            });
+        } else {
+            fallbackCopy(fpsNumber);
+        }
+    }
+    
+    /**
+     * 降級複製方式（兼容舊瀏覽器）
+     */
+    function fallbackCopy(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            alert('✅ 已複製轉數快號碼：' + text + '\n多謝支持！☕');
+        } catch (err) {
+            alert('❌ 複製失敗，請手動記錄：' + text);
+        }
+        document.body.removeChild(textArea);
+    }
+
+    // ====================================================================
+    // ===== 全局錯誤捕獲 =====
+    // ====================================================================
+    window.onerror = function(msg, url, line, col, error) {
+        console.error('🚨 全局錯誤捕獲:', msg, '位於', line, '行');
+        return true;
+    };
+    window.addEventListener('unhandledrejection', function(event) {
+        console.error('🚨 未處理的Promise拒絕:', event.reason);
+        event.preventDefault();
+    });
+
+    // ====================================================================
+    // ===== 乘客位置分享功能 =====
+    // ====================================================================
+    function toggleLocationShare() {
+        const btn = document.getElementById('shareLocationBtn');
+        if (isSharingLocation) { stopLocationShare(); return; }
+        if (!navigator.geolocation) { alert('❌ 瀏覽器唔支援定位功能'); return; }
+        btn.textContent = '⏳ 正在獲取位置...'; btn.disabled = true;
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                isSharingLocation = true;
+                currentPosition = { lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy };
+                btn.textContent = '📤 正在分享'; btn.classList.add('sharing'); btn.disabled = false;
+                updateShareUI(true); startLocationTracking();
+                console.log('✅ 乘客位置分享已開啟，精度：' + Math.round(position.coords.accuracy) + '米');
+            },
+            function(error) {
+                btn.textContent = '📤 分享位置'; btn.disabled = false;
+                let errorMsg = '';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED: errorMsg = '⚠️ 你拒絕了定位權限請求\n請手動開啟權限'; break;
+                    case error.POSITION_UNAVAILABLE: errorMsg = '⚠️ 無法獲取位置信號'; break;
+                    case error.TIMEOUT: errorMsg = '⚠️ 獲取位置超時'; break;
+                    default: errorMsg = '⚠️ 定位失敗，請重試';
+                }
+                alert(errorMsg);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+
+    function stopLocationShare() {
+        isSharingLocation = false;
+        if (watchPositionId) { navigator.geolocation.clearWatch(watchPositionId); watchPositionId = null; }
+        const btn = document.getElementById('shareLocationBtn');
+        btn.textContent = '📤 分享位置'; btn.classList.remove('sharing');
+        updateShareUI(false);
+        if (passengerMarkerOnPassengerMap && passengerMap) { passengerMap.removeLayer(passengerMarkerOnPassengerMap); passengerMarkerOnPassengerMap = null; }
+        if (passengerCircleOnPassengerMap && passengerMap) { passengerMap.removeLayer(passengerCircleOnPassengerMap); passengerCircleOnPassengerMap = null; }
+    }
+
+    function startLocationTracking() {
+        watchPositionId = navigator.geolocation.watchPosition(
+            function(position) {
+                currentPosition = { lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy };
+                updatePassengerLocationOnMap(currentPosition);
+                const accuracyEl = document.getElementById('shareAccuracy');
+                if (accuracyEl) accuracyEl.textContent = '🎯 精度：' + Math.round(position.coords.accuracy) + '米';
+                const updateEl = document.getElementById('shareLastUpdate');
+                if (updateEl) { const now = new Date(); updateEl.textContent = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0'); }
+            },
+            function(error) { console.error('❌ 位置追蹤失敗：', error.message); },
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 1000 }
+        );
+    }
+
+    function updateShareUI(isSharing) {
+        const indicator = document.getElementById('shareStatusIndicator');
+        const statusText = document.getElementById('shareStatusText');
+        if (indicator) indicator.className = 'status-indicator ' + (isSharing ? 'green' : 'gray');
+        if (statusText) statusText.textContent = isSharing ? '📍 位置共享已開啟（GPS精確定位）' : '📍 位置共享已關閉';
+    }
+
+    function updatePassengerLocationOnMap(position) {
+        if (!passengerMap) return;
+        if (passengerMarkerOnPassengerMap) passengerMap.removeLayer(passengerMarkerOnPassengerMap);
+        if (passengerCircleOnPassengerMap) passengerMap.removeLayer(passengerCircleOnPassengerMap);
+        const icon = L.divIcon({
+            className: '',
+            html: '<div style="background:#4CAF50;color:#fff;border-radius:20px;padding:6px 12px;font-size:13px;font-weight:bold;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,0.4);display:flex;align-items:center;gap:4px;">📍 你喺呢度</div>',
+            iconSize: [120, 34], iconAnchor: [60, 17]
+        });
+        passengerMarkerOnPassengerMap = L.marker([position.lat, position.lng], { icon: icon }).addTo(passengerMap);
+        passengerCircleOnPassengerMap = L.circle([position.lat, position.lng], { radius: position.accuracy, color: '#4CAF50', fillColor: '#4CAF50', fillOpacity: 0.15, weight: 2 }).addTo(passengerMap);
+        passengerMap.setView([position.lat, position.lng], 16);
+    }
+
+    // ====================================================================
+    // ===== 司機位置分享功能 =====
+    // ====================================================================
+    function toggleDriverLocationShare() {
+        const btn = document.getElementById('driverLocationShareBtn');
+        if (isDriverSharingLocation) { stopDriverLocationShare(); return; }
+        if (!navigator.geolocation) { alert('❌ 瀏覽器唔支援定位功能'); return; }
+        btn.textContent = '⏳ 正在獲取位置...'; btn.disabled = true;
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                isDriverSharingLocation = true;
+                currentPosition = { lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy };
+                btn.textContent = '📤 分享中'; btn.classList.add('active'); btn.disabled = false; btn.dataset.active = 'true';
+                updateDriverShareUI(true); startDriverLocationTracking(); syncDriverLocationToPassenger(currentPosition);
+                console.log('✅ 司機位置分享已開啟，精度：' + Math.round(position.coords.accuracy) + '米');
+            },
+            function(error) {
+                btn.textContent = '📤 分享位置'; btn.disabled = false;
+                let errorMsg = '';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED: errorMsg = '⚠️ 你拒絕了定位權限請求\n請手動開啟權限'; break;
+                    case error.POSITION_UNAVAILABLE: errorMsg = '⚠️ 無法獲取位置信號'; break;
+                    case error.TIMEOUT: errorMsg = '⚠️ 獲取位置超時'; break;
+                    default: errorMsg = '⚠️ 定位失敗，請重試';
+                }
+                alert(errorMsg);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+
+    function stopDriverLocationShare() {
+        isDriverSharingLocation = false;
+        if (driverWatchId) { navigator.geolocation.clearWatch(driverWatchId); driverWatchId = null; }
+        const btn = document.getElementById('driverLocationShareBtn');
+        btn.textContent = '📤 分享位置'; btn.classList.remove('active'); btn.dataset.active = 'false';
+        updateDriverShareUI(false);
+        if (driverMarkerOnDriverMap && driverMap) { driverMap.removeLayer(driverMarkerOnDriverMap); driverMarkerOnDriverMap = null; }
+        if (driverMarkerOnPassengerMap && passengerMap) { passengerMap.removeLayer(driverMarkerOnPassengerMap); driverMarkerOnPassengerMap = null; }
+        if (driverCircleOnPassengerMap && passengerMap) { passengerMap.removeLayer(driverCircleOnPassengerMap); driverCircleOnPassengerMap = null; }
+        localStorage.removeItem('driver_current_location');
+    }
+
+    function startDriverLocationTracking() {
+        driverWatchId = navigator.geolocation.watchPosition(
+            function(position) {
+                currentPosition = { lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy };
+                updateDriverLocationOnDriverMap(currentPosition);
+                syncDriverLocationToPassenger(currentPosition);
+                const updateEl = document.getElementById('driverShareLastUpdate');
+                if (updateEl) { const now = new Date(); updateEl.textContent = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0'); }
+            },
+            function(error) { console.error('❌ 司機位置追蹤失敗：', error.message); },
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 1000 }
+        );
+    }
+
+    function updateDriverShareUI(isSharing) {
+        const indicator = document.getElementById('driverShareStatusIndicator');
+        const statusText = document.getElementById('driverShareStatusText');
+        if (indicator) indicator.className = 'status-indicator ' + (isSharing ? 'green' : 'gray');
+        if (statusText) statusText.textContent = isSharing ? 'GPS精確定位已開啟' : '已關閉';
+    }
+
+    function updateDriverLocationOnDriverMap(position) {
+        if (!driverMap) return;
+        if (driverMarkerOnDriverMap) driverMap.removeLayer(driverMarkerOnDriverMap);
+        const icon = L.divIcon({
+            className: '',
+            html: '<div style="background:#7B1818;color:#fff;border-radius:20px;padding:6px 12px;font-size:13px;font-weight:bold;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,0.4);display:flex;align-items:center;gap:4px;">🚐 你喺呢度</div>',
+            iconSize: [120, 34], iconAnchor: [60, 17]
+        });
+        driverMarkerOnDriverMap = L.marker([position.lat, position.lng], { icon: icon }).addTo(driverMap);
+        driverMap.setView([position.lat, position.lng], 16);
+    }
+
+    function syncDriverLocationToPassenger(position) {
+        const locationData = { lat: position.lat, lng: position.lng, accuracy: position.accuracy, timestamp: Date.now(), isSharing: isDriverSharingLocation };
+        localStorage.setItem('driver_current_location', JSON.stringify(locationData));
+        if (passengerMap) updateDriverLocationOnPassengerMap(position);
+    }
+
+    function updateDriverLocationOnPassengerMap(position) {
+        if (!passengerMap) return;
+        if (driverMarkerOnPassengerMap) passengerMap.removeLayer(driverMarkerOnPassengerMap);
+        if (driverCircleOnPassengerMap) passengerMap.removeLayer(driverCircleOnPassengerMap);
+        const icon = L.divIcon({
+            className: '',
+            html: '<div style="background:#7B1818;color:#fff;border-radius:20px;padding:6px 12px;font-size:13px;font-weight:bold;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,0.4);display:flex;align-items:center;gap:4px;">🚐 司機位置</div>',
+            iconSize: [120, 34], iconAnchor: [60, 17]
+        });
+        driverMarkerOnPassengerMap = L.marker([position.lat, position.lng], { icon: icon }).addTo(passengerMap);
+        driverCircleOnPassengerMap = L.circle([position.lat, position.lng], { radius: position.accuracy || 50, color: '#7B1818', fillColor: '#7B1818', fillOpacity: 0.1, weight: 2 }).addTo(passengerMap);
+    }
+
+    function startPassengerDriverLocationSync() {
+        setInterval(function() {
+            if (document.querySelector('#page-passenger.page.active')) {
+                var stored = localStorage.getItem('driver_current_location');
+                if (stored) {
+                    try {
+                        var data = JSON.parse(stored);
+                        if (data.isSharing && passengerMap) {
+                            updateDriverLocationOnPassengerMap(data);
+                            var distBar = document.getElementById('driverDistanceBar');
+                            var distValue = document.getElementById('driverDistValue');
+                            if (distBar && distValue) {
+                                distBar.style.display = 'flex';
+                                distValue.textContent = '🎯 精度：' + Math.round(data.accuracy) + '米 · ' + new Date(data.timestamp).getHours().toString().padStart(2,'0') + ':' + new Date(data.timestamp).getMinutes().toString().padStart(2,'0');
+                            }
+                        } else { var distBar = document.getElementById('driverDistanceBar'); if (distBar) distBar.style.display = 'none'; }
+                    } catch(e) {}
+                }
+            }
+        }, 3000);
+    }
+
+    // ====================================================================
+    // ===== Zello PTT 對講功能（使用WebRTC技術實現） =====
+    // ====================================================================
+    
+    /**
+     * 初始化麥克風權限
+     */
+    async function initMicrophone() {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    sampleRate: 44100
+                }, 
+                video: false 
+            });
+            console.log('✅ 麥克風權限獲取成功');
+            
+            const statusEl = document.getElementById('zelloStatusPassenger');
+            if (statusEl) statusEl.textContent = '🎤 即時對講已就緒 | 按住講話 · 鬆手發送';
+            
+            document.getElementById('zelloConnectionStatus').textContent = '🟢 已連接';
+            
+            setupPTTButtons();
+            
+        } catch (error) {
+            console.error('❌ 麥克風權限獲取失敗:', error);
+            let errorMsg = '';
+            switch(error.name) {
+                case 'NotAllowedError': errorMsg = '⚠️ 麥克風權限被拒絕，請喺瀏覽器設定中允許使用麥克風'; break;
+                case 'NotFoundError': errorMsg = '⚠️ 找不到麥克風設備'; break;
+                default: errorMsg = '⚠️ 麥克風訪問失敗：' + error.message;
+            }
+            const statusEl = document.getElementById('zelloStatusPassenger');
+            if (statusEl) statusEl.textContent = errorMsg;
+            document.getElementById('zelloConnectionStatus').textContent = '🔴 麥克風未授權';
+        }
+    }
+
+    /**
+     * 為所有PTT按鈕綁定事件
+     */
+    function setupPTTButtons() {
+        const buttons = document.querySelectorAll('.zello-ptt-btn, .zello-ptt-btn-driver');
+        
+        buttons.forEach(btn => {
+            const channel = btn.dataset.channel;
+            
+            btn.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                startRecording(channel, this);
+            });
+            btn.addEventListener('mouseup', function(e) {
+                e.preventDefault();
+                stopRecording(channel, this);
+            });
+            btn.addEventListener('mouseleave', function(e) {
+                if (isPTTRecording) stopRecording(channel, this);
+            });
+            
+            btn.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                startRecording(channel, this);
+            });
+            btn.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                stopRecording(channel, this);
+            });
+            btn.addEventListener('touchcancel', function(e) {
+                if (isPTTRecording) stopRecording(channel, this);
+            });
+        });
+    }
+
+    /**
+     * 開始錄音
+     */
+    function startRecording(channel, btnElement) {
+        if (isPTTRecording || !localStream) return;
+        
+        isPTTRecording = true;
+        audioChunks = [];
+        
+        try {
+            mediaRecorder = new MediaRecorder(localStream, {
+                mimeType: 'audio/webm;codecs=opus'
+            });
+            
+            mediaRecorder.ondataavailable = function(event) {
+                if (event.data.size > 0) audioChunks.push(event.data);
+            };
+            
+            mediaRecorder.onstop = function() {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                sendVoiceMessage(audioBlob, channel);
+                isPTTRecording = false;
+            };
+            
+            mediaRecorder.start();
+            
+            // 更新按鈕UI
+            btnElement.style.transform = 'scale(0.95)';
+            btnElement.style.opacity = '0.8';
+            btnElement.classList.add('ptt-recording');
+            btnElement.innerHTML = '🔴 講話中...';
+            
+            console.log('🎤 開始錄音，頻道:', channel);
+            
+        } catch (error) {
+            console.error('❌ 錄音失敗:', error);
+            isPTTRecording = false;
+            resetButtonUI(btnElement, channel);
+        }
+    }
+
+    /**
+     * 停止錄音
+     */
+    function stopRecording(channel, btnElement) {
+        if (!isPTTRecording || !mediaRecorder) return;
+        
+        if (audioChunks.length === 0) {
+            mediaRecorder.stop();
+            isPTTRecording = false;
+            resetButtonUI(btnElement, channel);
+            return;
+        }
+        
+        mediaRecorder.stop();
+        resetButtonUI(btnElement, channel);
+    }
+
+    /**
+     * 發送語音訊息
+     */
+    function sendVoiceMessage(audioBlob, channel) {
+        const channelInfo = pttChannelMap[channel] || { name: channel, color: '#888' };
+        
+        const reader = new FileReader();
+        reader.onload = function() {
+            const message = {
+                channel: channel,
+                channelName: channelInfo.name,
+                audio: reader.result,
+                sender: getSenderName(),
+                senderRole: document.querySelector('#page-driver.page.active') ? 'driver' : 'passenger',
+                timestamp: Date.now(),
+                id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4)
+            };
+            
+            localStorage.setItem('zello_voice_message', JSON.stringify(message));
+            
+            const groupKey = 'zello_group_' + channel;
+            const groupMessages = JSON.parse(localStorage.getItem(groupKey) || '[]');
+            groupMessages.push(message);
+            if (groupMessages.length > 50) groupMessages.shift();
+            localStorage.setItem(groupKey, JSON.stringify(groupMessages));
+            
+            playVoiceMessage(message.audio);
+            updateVoiceHistory(message);
+        };
+        reader.readAsDataURL(audioBlob);
+    }
+
+    /**
+     * 播放接收到的語音
+     */
+    function playVoiceMessage(audioData) {
+        const audioPlayer = document.getElementById('remoteAudio');
+        if (!audioPlayer) return;
+        
+        try {
+            if (typeof audioData === 'string' && audioData.startsWith('data:')) {
+                audioPlayer.src = audioData;
+            } else if (audioData instanceof Blob) {
+                audioPlayer.src = URL.createObjectURL(audioData);
+            }
+            audioPlayer.play().catch(function(error) {
+                console.warn('⚠️ 自動播放被阻止:', error);
+            });
+        } catch (error) {
+            console.error('❌ 播放失敗:', error);
+        }
+    }
+
+    /**
+     * 監聽語音訊息
+     */
+    function listenForVoiceMessages() {
+        window.addEventListener('storage', function(event) {
+            if (event.key === 'zello_voice_message' && event.newValue) {
+                try {
+                    const message = JSON.parse(event.newValue);
+                    handleIncomingMessage(message);
+                } catch(e) {}
+            }
+        });
+        
+        setInterval(function() {
+            var currentUserRole = document.querySelector('#page-driver.page.active') ? 'driver' : 'passenger';
+            
+            var channels = Object.keys(pttChannelMap);
+            channels.forEach(function(channel) {
+                var groupKey = 'zello_group_' + channel;
+                var messages = JSON.parse(localStorage.getItem(groupKey) || '[]');
+                if (messages.length > 0) {
+                    var lastMsg = messages[messages.length - 1];
+                    if (lastMsg.senderRole !== currentUserRole) {
+                        handleIncomingMessage(lastMsg);
+                        lastMsg.senderRole = currentUserRole;
+                        messages[messages.length - 1] = lastMsg;
+                        localStorage.setItem(groupKey, JSON.stringify(messages));
+                    }
+                }
+            });
+        }, 1000);
+    }
+
+    /**
+     * 處理接收到的語音訊息
+     */
+    function handleIncomingMessage(message) {
+        if (!message || !message.audio) return;
+        
+        playVoiceMessage(message.audio);
+        updateVoiceHistory(message);
+        
+        const statusEl = document.getElementById('zelloStatusPassenger');
+        if (statusEl) {
+            statusEl.textContent = `🎤 ${message.sender} 喺${message.channelName}講話中...`;
+            setTimeout(function() {
+                statusEl.textContent = '🎤 即時對講已就緒 | 按住講話 · 鬆手發送';
+            }, 3000);
+        }
+    }
+
+    /**
+     * 更新語音歷史記錄（司機版）
+     */
+    function updateVoiceHistory(message) {
+        const historyEl = document.getElementById('voiceHistoryDriver');
+        if (!historyEl) return;
+        
+        const time = new Date(message.timestamp);
+        const timeStr = time.getHours().toString().padStart(2,'0') + ':' + 
+                        time.getMinutes().toString().padStart(2,'0') + ':' +
+                        time.getSeconds().toString().padStart(2,'0');
+        
+        const item = document.createElement('div');
+        item.style.cssText = 'display:flex;align-items:center;gap:0.3rem;padding:0.2rem 0;border-bottom:1px solid #eee;font-size:0.75rem;';
+        item.innerHTML = `
+            <span style="color:#7B1818;font-weight:bold;">${message.sender}</span>
+            <span style="color:#888;">[${timeStr}]</span>
+            <span style="color:${pttChannelMap[message.channel]?.color || '#888'};font-weight:bold;">${message.channelName}</span>
+            <button onclick="replayAudio('${message.audio}')" style="background:#FF9800;color:#fff;border:none;border-radius:4px;padding:0.1rem 0.4rem;font-size:0.7rem;cursor:pointer;margin-left:auto;">▶️ 重播</button>
+        `;
+        
+        historyEl.appendChild(item);
+        historyEl.scrollTop = historyEl.scrollHeight;
+        
+        while (historyEl.children.length > 15) {
+            historyEl.removeChild(historyEl.firstChild);
+        }
+    }
+
+    /**
+     * 重播語音
+     */
+    function replayAudio(audioData) {
+        playVoiceMessage(audioData);
+    }
+
+    /**
+     * 清空語音歷史
+     */
+    function clearVoiceHistory() {
+        const historyEl = document.getElementById('voiceHistoryDriver');
+        if (historyEl) {
+            historyEl.innerHTML = '💬 語音記錄會顯示喺度';
+        }
+    }
+
+    /**
+     * 獲取發送者名稱
+     */
+    function getSenderName() {
+        if (document.querySelector('#page-driver.page.active')) {
+            return '🚐 司機';
+        } else {
+            return '🚌 乘客_' + Math.random().toString(36).substr(2, 4);
+        }
+    }
+
+    /**
+     * 重置按鈕UI
+     */
+    function resetButtonUI(btnElement, channel) {
+        if (!btnElement) return;
+        const channelInfo = pttChannelMap[channel] || { name: channel };
+        btnElement.style.transform = 'scale(1)';
+        btnElement.style.opacity = '1';
+        btnElement.classList.remove('ptt-recording');
+        btnElement.innerHTML = channel === 'hongvan_all' ? '📢 全體廣播<br><small>按住講話</small>' :
+                              channel === 'hongvan_driver' ? '🚐 司機頻道<br><small>按住講話</small>' :
+                              channel === 'hongvan_A' ? '🅰️ A群<br><small>按住講話</small>' :
+                              channel === 'hongvan_B' ? '🅱️ B群<br><small>按住講話</small>' :
+                              channel === 'hongvan_C' ? '©️ C群<br><small>按住講話</small>' :
+                              channel === 'hongvan_D' ? '🅳️ D群<br><small>按住講話</small>' : channelInfo.name;
+    }
+
+    // ====================================================================
+    // ===== 地圖初始化 =====
+    // ====================================================================
+    function safeInitPassengerMap() {
+        if (passengerMapInitialized) return;
+        const mapContainer = document.getElementById('map');
+        if (!mapContainer) return;
+        try {
+            passengerMap = L.map('map', { center: [22.4413, 114.0100], zoom: 15, zoomControl: true });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OSM', maxZoom: 19, minZoom: 10 }).addTo(passengerMap);
+            passengerMap.on('load', function() { document.getElementById('mapLoading').classList.add('hidden'); });
+            passengerMapInitialized = true;
+            setTimeout(function() { document.getElementById('mapLoading').classList.add('hidden'); }, 2000);
+        } catch(error) {
+            console.error('❌ 乘客地圖初始化失敗:', error);
+        }
+    }
+
+    function safeInitDriverMap() {
+        if (driverMapInitialized) return;
+        const mapContainer = document.getElementById('driverMap');
+        if (!mapContainer) return;
+        try {
+            driverMap = L.map('driverMap', { center: [22.4413, 114.0100], zoom: 15, zoomControl: true });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OSM', maxZoom: 19, minZoom: 10 }).addTo(driverMap);
+            driverMap.on('load', function() { document.getElementById('driverMapLoading').classList.add('hidden'); });
+            driverMapInitialized = true;
+            setTimeout(function() { document.getElementById('driverMapLoading').classList.add('hidden'); }, 2000);
+        } catch(error) {
+            console.error('❌ 司機地圖初始化失敗:', error);
+        }
+    }
+
+    // ====================================================================
+    // ===== 路線選擇功能 =====
+    // ====================================================================
+    function openRouteModal() {
+        const modal = document.getElementById('routeModal');
+        if (modal) modal.classList.add('active');
+    }
+
+    function selectRoute(el) {
+        if (!el) return;
+        document.querySelectorAll('.route-option').forEach(opt => opt.classList.remove('selected'));
+        el.classList.add('selected');
+    }
+
+    function confirmRouteSelection() {
+        const selected = document.querySelector('.route-option.selected');
+        if (!selected) { alert('請先選擇一條路線'); return; }
+        passengerSelectedRoute = { name: selected.dataset.route, start: selected.dataset.start, end: selected.dataset.end };
+        const btn = document.getElementById('routeSelectBtn');
+        if (btn) { btn.textContent = `🗺️ 路線選擇 · ${passengerSelectedRoute.start}→${passengerSelectedRoute.end}`; btn.classList.add('selected'); }
+        const display = document.getElementById('passengerRouteDisplay');
+        if (display) display.textContent = `🚐 紅van通 · ${passengerSelectedRoute.start}→${passengerSelectedRoute.end}`;
+        const routeDisplay = document.getElementById('passengerSelectedRouteDisplay');
+        if (routeDisplay) routeDisplay.textContent = ` | 路線：${passengerSelectedRoute.start}→${passengerSelectedRoute.end}`;
+        localStorage.setItem('passenger_selected_route', JSON.stringify(passengerSelectedRoute));
+        const modal = document.getElementById('routeModal');
+        if (modal) modal.classList.remove('active');
+        setTimeout(function() { updateRouteOnMap(); }, 500);
+    }
+
+    function updateRouteOnMap() {
+        if (!passengerMap) return;
+        routeMapMarkers.forEach(function(marker) { try { passengerMap.removeLayer(marker); } catch(e) {} });
+        routeMapMarkers = [];
+        var routeCoords = getRouteCoordinates(passengerSelectedRoute.name);
+        if (!routeCoords) return;
+        var startIcon = L.divIcon({ className: '', html: '<div style="background:#2E7D32;color:#fff;border-radius:10px;padding:4px 10px;font-size:12px;font-weight:bold;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.3);">🟢 ' + passengerSelectedRoute.start + '</div>', iconSize: [80, 24], iconAnchor: [40, 12] });
+        var startMarker = L.marker(routeCoords.start, { icon: startIcon }).addTo(passengerMap);
+        routeMapMarkers.push(startMarker);
+        var endIcon = L.divIcon({ className: '', html: '<div style="background:#7B1818;color:#fff;border-radius:10px;padding:4px 10px;font-size:12px;font-weight:bold;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.3);">🔴 ' + passengerSelectedRoute.end + '</div>', iconSize: [80, 24], iconAnchor: [40, 12] });
+        var endMarker = L.marker(routeCoords.end, { icon: endIcon }).addTo(passengerMap);
+        routeMapMarkers.push(endMarker);
+        var latlngs = [routeCoords.start, routeCoords.mid1 || routeCoords.start, routeCoords.mid2 || routeCoords.end, routeCoords.end];
+        var polyline = L.polyline(latlngs, { color: '#F5C518', weight: 4, opacity: 0.7, dashArray: '10, 5' }).addTo(passengerMap);
+        routeMapMarkers.push(polyline);
+        var bounds = L.latLngBounds([routeCoords.start, routeCoords.end]);
+        passengerMap.fitBounds(bounds, { padding: [50, 50] });
+    }
+
+    function getRouteCoordinates(routeName) {
+        var routes = {
+            '元朗-大棠': { start: [22.4429, 114.0112], mid1: [22.4400, 114.0080], mid2: [22.4350, 114.0030], end: [22.4250, 114.0000] },
+            '元朗-水流田': { start: [22.4429, 114.0112], mid1: [22.4380, 114.0060], mid2: [22.4300, 114.0010], end: [22.4200, 113.9950] },
+            '元朗-洪水橋': { start: [22.4429, 114.0112], mid1: [22.4450, 114.0050], mid2: [22.4480, 113.9950], end: [22.4500, 113.9850] },
+            '天水圍-元朗': { start: [22.4550, 114.0000], mid1: [22.4480, 114.0050], mid2: [22.4440, 114.0080], end: [22.4410, 114.0100] }
+        };
+        return routes[routeName] || null;
+    }
+
+    // ====================================================================
+    // ===== 座位管理功能 =====
+    // ====================================================================
+    function selectSeatCapacity(capacity) {
+        seatCapacity = capacity;
+        document.querySelectorAll('.seat-selector button').forEach(function(b) { b.classList.remove('active'); });
+        document.getElementById(capacity === 16 ? 'seat16' : 'seat19').classList.add('active');
+        localStorage.setItem('current_seat_capacity', capacity.toString());
+        syncSeatDataToPassenger();
+    }
+
+    function incrementSeat() {
+        if (seatCount < seatCapacity) { seatCount++; document.getElementById('seatCounter').textContent = seatCount; if (seatCount === seatCapacity) document.getElementById('fullBtn').classList.add('active'); syncSeatDataToPassenger(); }
+    }
+
+    function decrementSeat() {
+        if (seatCount > 0) { seatCount--; document.getElementById('seatCounter').textContent = seatCount; document.getElementById('fullBtn').classList.remove('active'); syncSeatDataToPassenger(); }
+    }
+
+    function toggleFull() {
+        var btn = document.getElementById('fullBtn');
+        btn.classList.toggle('active');
+        if (btn.classList.contains('active')) { seatCount = seatCapacity; document.getElementById('seatCounter').textContent = seatCount; }
+        else { seatCount = 0; document.getElementById('seatCounter').textContent = '0'; }
+        syncSeatDataToPassenger();
+    }
+
+    function resetSeats() { seatCount = 0; document.getElementById('seatCounter').textContent = '0'; document.getElementById('fullBtn').classList.remove('active'); syncSeatDataToPassenger(); }
+
+    function syncSeatDataToPassenger() {
+        var seatData = { count: seatCount, capacity: seatCapacity, isFull: isFull || seatCount >= seatCapacity, timestamp: Date.now() };
+        localStorage.setItem('passenger_seat_data', JSON.stringify(seatData));
+        updatePassengerSeatDisplay();
+    }
+
+    function updatePassengerSeatDisplay() {
+        var seatCountEl = document.getElementById('seatCountNum');
+        var seatTotalEl = document.getElementById('seatTotalNum');
+        var availableBadge = document.getElementById('availableBadge');
+        var fullBadge = document.getElementById('fullBadge');
+        var updateTimeEl = document.getElementById('updateTime');
+        if (!seatCountEl) return;
+        seatCountEl.textContent = seatCount;
+        seatTotalEl.textContent = seatCapacity;
+        var isCurrentlyFull = seatCount >= seatCapacity || isFull;
+        if (isCurrentlyFull) { availableBadge.style.display = 'none'; fullBadge.style.display = 'inline-block'; seatCountEl.style.color = '#f44336'; }
+        else { availableBadge.style.display = 'inline-block'; fullBadge.style.display = 'none'; seatCountEl.style.color = '#7B1818'; }
+        var now = new Date();
+        updateTimeEl.textContent = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0');
+    }
+
+    function startPassengerSeatSync() {
+        setInterval(function() {
+            var stored = localStorage.getItem('passenger_seat_data');
+            if (stored) {
+                try {
+                    var data = JSON.parse(stored);
+                    if (!document.querySelector('#page-driver.page.active')) {
+                        var seatCountEl = document.getElementById('seatCountNum');
+                        var seatTotalEl = document.getElementById('seatTotalNum');
+                        if (seatCountEl) {
+                            seatCountEl.textContent = data.count;
+                            seatTotalEl.textContent = data.capacity;
+                            var availableBadge = document.getElementById('availableBadge');
+                            var fullBadge = document.getElementById('fullBadge');
+                            if (data.isFull) { availableBadge.style.display = 'none'; fullBadge.style.display = 'inline-block'; seatCountEl.style.color = '#f44336'; }
+                            else { availableBadge.style.display = 'inline-block'; fullBadge.style.display = 'none'; seatCountEl.style.color = '#7B1818'; }
+                            var updateTimeEl = document.getElementById('updateTime');
+                            var time = new Date(data.timestamp);
+                            updateTimeEl.textContent = time.getHours().toString().padStart(2,'0') + ':' + time.getMinutes().toString().padStart(2,'0') + ':' + time.getSeconds().toString().padStart(2,'0');
+                        }
+                    }
+                } catch(e) {}
+            }
+        }, 2000);
+    }
+
+    // ====================================================================
+    // ===== 司機狀態更新 =====
+    // ====================================================================
+    function updatePassengerDriverStatus(status) {
+        var badge = document.getElementById('driverStatusBadge');
+        if (!badge) return;
+        var statusMap = { business: { text: '🟢 做生意', class: 'business' }, off: { text: '⚫ 收工', class: 'off' }, food: { text: '🟠 食飯', class: 'food' }, garage: { text: '🔵 入車房', class: 'garage' }, fuel: { text: '🟡 去加油', class: 'fuel' } };
+        var info = statusMap[status] || statusMap.business;
+        badge.textContent = info.text;
+        badge.className = 'status-badge ' + info.class;
+    }
+
+    // ====================================================================
+    // ===== 路線管理功能 =====
+    // ====================================================================
+    let fixedRoutes = [{ start:'元朗西鐵站', end:'大棠黃泥墩' },{ start:'元朗西鐵站', end:'水流田' }];
+
+    function swapRoute(idx) { 
+        var r = fixedRoutes[idx]; 
+        var temp = r.start; 
+        r.start = r.end; 
+        r.end = temp; 
+        var cards = document.querySelectorAll('#driverRoutePage .route-card'); 
+        var nameDiv = cards[idx].querySelector('.route-name'); 
+        nameDiv.textContent = (idx===0?'①':'②') + ' ' + r.start + ' → ' + r.end; 
+    }
+    
+    function useRoute(start, end) { 
+        currentRouteStart = start; 
+        currentRouteEnd = end; 
+        alert('已使用路線：' + start + ' → ' + end); 
+        document.querySelector('[data-driver-page="map"]').click(); 
+    }
+    
+    function buildCustomRoutes() {
+        var container = document.getElementById('customRoutes'); 
+        if (!container) return;
+        container.innerHTML = '';
+        for (var i = 0; i < 8; i++) {
+            var div = document.createElement('div'); 
+            div.className = 'route-card';
+            div.innerHTML = '<div class="route-name">自訂路線 ' + (i+3) + '</div><input class="route-input" placeholder="起點" id="custStart' + i + '"><input class="route-input" placeholder="終點" id="custEnd' + i + '"><div class="route-actions"><button onclick="swapCustom(' + i + ')">🔄 兌換起終點</button><button onclick="useCustom(' + i + ')">✅ 使用此路線</button></div>';
+            container.appendChild(div);
+        }
+    }
+    
+    function swapCustom(idx) { 
+        var s = document.getElementById('custStart' + idx), e = document.getElementById('custEnd' + idx); 
+        var temp = s.value; 
+        s.value = e.value; 
+        e.value = temp; 
+    }
+    
+    function useCustom(idx) { 
+        var s = document.getElementById('custStart' + idx).value.trim(), e = document.getElementById('custEnd' + idx).value.trim(); 
+        if (!s || !e) { alert('請輸入起點和終點'); return; } 
+        useRoute(s, e); 
+    }
+
+    // ====================================================================
+    // ===== 通訊頁面功能 =====
+    // ====================================================================
+    function buildMsgGroups() {
+        var container = document.getElementById('msgGroups');
+        if (!container) return;
+        var groups = ['A群','B群','C群','D群'];
+        container.innerHTML = '';
+        groups.forEach(function(g, idx) {
+            var div = document.createElement('div'); 
+            div.className = 'msg-group';
+            div.innerHTML = '<h4>' + ['🟢','🟡','🔵','🟣'][idx] + ' ' + g + '</h4><div class="msg-item"><span class="time">[' + (new Date().getHours().toString().padStart(2,'0') + ':' + new Date().getMinutes().toString().padStart(2,'0')) + ']</span> <span class="sender">系統</span>：歡迎使用 ' + g + ' 通訊</div><div class="msg-reply"><input placeholder="輸入回應' + g + '..." id="reply' + idx + '"><button onclick="sendReply(' + idx + ')">發送</button></div>';
+            container.appendChild(div);
+        });
+    }
+
+    function sendReply(idx) { 
+        var input = document.getElementById('reply' + idx); 
+        var msg = input.value.trim(); 
+        if (!msg) return; 
+        alert('已發送回覆到' + ['A群','B群','C群','D群'][idx] + '：' + msg); 
+        input.value = ''; 
+    }
+
+    // ====================================================================
+    // ===== 版主功能 =====
+    // ====================================================================
+    function approveDriver(btn) { 
+        btn.closest('tr').querySelector('td:nth-child(3)').textContent = '🟢 已批准'; 
+        btn.remove(); 
+    }
+    function blockDriver(btn) { 
+        btn.closest('tr').querySelector('td:nth-child(3)').textContent = '🔴 被封鎖'; 
+        var td = btn.closest('tr').querySelector('td:last-child'); 
+        td.innerHTML = '<button class="admin-btn unblock" onclick="unblockDriver(this)">撤銷</button>'; 
+    }
+    function unblockDriver(btn) { 
+        btn.closest('tr').querySelector('td:nth-child(3)').textContent = '🟢 已批准'; 
+        var td = btn.closest('tr').querySelector('td:last-child'); 
+        td.innerHTML = '<button class="admin-btn block" onclick="blockDriver(this)">封鎖</button>'; 
+    }
+    function saveWALinks() {
+        var a = document.getElementById('waA').value.trim(), b = document.getElementById('waB').value.trim(), c = document.getElementById('waC').value.trim(), d = document.getElementById('waD').value.trim();
+        waLinks.A = a; waLinks.B = b; waLinks.C = c; waLinks.D = d;
+        var btns = document.querySelectorAll('#page-passenger .whatsapp-btn');
+        if (btns.length >= 4) { btns[0].dataset.link = a; btns[1].dataset.link = b; btns[2].dataset.link = c; btns[3].dataset.link = d; }
+        alert('✅ 群組連結已儲存！');
+    }
+    function saveSettings() { 
+        var val = document.getElementById('defaultSeat').value; 
+        seatCapacity = parseInt(val); 
+        selectSeatCapacity(seatCapacity); 
+        alert('✅ 設定已儲存'); 
+    }
+
+    // ====================================================================
+    // ===== 輔助功能 =====
+    // ====================================================================
+    function goHome(role) {
+        if (role === 'passenger') {
+            if (isFullScreen) {
+                document.querySelector('#page-passenger .top-bar').style.display = 'flex';
+                document.querySelector('#page-passenger .driver-status-display').style.display = 'flex';
+                document.querySelector('#page-passenger .seat-info-display').style.display = 'flex';
+                document.querySelector('#page-passenger .location-share-bar').style.display = 'flex';
+                document.querySelector('#page-passenger .driver-distance-bar').style.display = 'flex';
+                document.querySelector('#page-passenger .bottom-panel').style.display = 'flex';
+                isFullScreen = false;
+                setTimeout(function() { if (passengerMap) passengerMap.invalidateSize(); }, 200);
+            }
+        } else if (role === 'driver') { backToDriverHome(); }
+    }
+
+    function backToDriverHome() {
+        document.querySelector('#page-driver .driver-container').style.display = 'flex';
+        document.getElementById('driverRoutePage').style.display = 'none';
+        document.getElementById('driverMsgPage').style.display = 'none';
+        document.querySelectorAll('.driver-nav button').forEach(function(b) { b.classList.remove('active'); });
+        var homeBtn = document.querySelector('[data-driver-page="home"]');
+        if (homeBtn) homeBtn.classList.add('active');
+        setTimeout(function() { if (driverMap) driverMap.invalidateSize(); }, 200);
+    }
+
+    function openHelpModal(target) {
+        var modal = document.getElementById('helpModal');
+        var content = document.getElementById('helpContent');
+        if (!modal || !content) return;
+        var helpText = {
+            passenger: '<h4>📱 乘客定位問題排查</h4><ul><li>檢查網絡：確保 Wi-Fi 或流動數據已開啟</li><li>檢查權限（iOS）：設定 → 私隱 → 定位服務 → 瀏覽器 → 「使用期間」+「精確位置」</li><li>檢查權限（Android）：設定 → 應用管理 → 瀏覽器 → 權限 → 定位 → 「始終允許」</li><li>關閉省電模式</li><li>清除瀏覽器快取</li><li>使用最新版 Chrome 或 Safari</li></ul>',
+            driver: '<h4>🚐 司機定位問題排查</h4><ul><li>檢查網絡：確保 Wi-Fi 或流動數據已開啟</li><li>檢查權限（iOS）：設定 → 私隱 → 定位服務 → 瀏覽器 → 「使用期間」+「精確位置」</li><li>檢查權限（Android）：設定 → 應用管理 → 瀏覽器 → 權限 → 定位 → 「始終允許」</li><li>關閉省電模式</li><li>清除瀏覽器快取</li><li>使用最新版 Chrome 或 Safari</li><li>將瀏覽器加入「不受電池優化」白名單</li></ul>'
+        };
+        content.innerHTML = helpText[target] || helpText.passenger;
+        modal.classList.add('active');
+    }
+
+    function closeHelpModal() {
+        document.getElementById('helpModal').classList.remove('active');
+    }
+
+    // ====================================================================
+    // ===== 初始化入口 =====
+    // ====================================================================
+    function safeInit() {
+        console.log('🔄 開始安全初始化...');
+        
+        buildCustomRoutes();
+        buildMsgGroups();
+        
+        setTimeout(function() {
+            safeInitPassengerMap();
+            safeInitDriverMap();
+        }, 1000);
+        
+        try {
+            var savedCapacity = parseInt(localStorage.getItem('current_seat_capacity') || '16');
+            selectSeatCapacity(savedCapacity);
+            updatePassengerSeatDisplay();
+            startPassengerSeatSync();
+        } catch(e) {}
+        
+        try {
+            var savedRoute = localStorage.getItem('passenger_selected_route');
+            if (savedRoute) {
+                var route = JSON.parse(savedRoute);
+                passengerSelectedRoute = route;
+                var btn = document.getElementById('routeSelectBtn');
+                if (btn) btn.textContent = '🗺️ 路線選擇 · ' + route.start + '→' + route.end;
+                var display = document.getElementById('passengerRouteDisplay');
+                if (display) display.textContent = '🚐 紅van通 · ' + route.start + '→' + route.end;
+                var routeDisplay = document.getElementById('passengerSelectedRouteDisplay');
+                if (routeDisplay) routeDisplay.textContent = ' | 路線：' + route.start + '→' + route.end;
+            }
+        } catch(e) {}
+        
+        // ===== 角色切換事件綁定 =====
+        document.querySelectorAll('.role-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.role-btn').forEach(function(b) { b.classList.remove('active'); });
+                this.classList.add('active');
+                var role = this.dataset.role;
+                document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+                document.getElementById('page-' + role).classList.add('active');
+                if (role === 'passenger') setTimeout(function() { if (passengerMap) passengerMap.invalidateSize(); }, 300);
+                if (role === 'driver') {
+                    document.querySelector('#page-driver .driver-container').style.display = 'flex';
+                    document.getElementById('driverRoutePage').style.display = 'none';
+                    document.getElementById('driverMsgPage').style.display = 'none';
+                    setTimeout(function() { if (driverMap) driverMap.invalidateSize(); }, 300);
+                }
+            });
+        });
+        
+        // ===== WhatsApp按鈕事件綁定 =====
+        document.querySelectorAll('#page-passenger .whatsapp-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() { 
+                var link = this.dataset.link; 
+                if (link) window.location.href = link; 
+                else alert('群組連結未設定'); 
+            });
+        });
+        
+        // ===== 司機狀態按鈕事件綁定 =====
+        document.querySelectorAll('.status-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.status-btn').forEach(function(b) { b.classList.remove('active'); });
+                this.classList.add('active');
+                currentDriverStatus = this.dataset.status;
+                updatePassengerDriverStatus(currentDriverStatus);
+            });
+        });
+        
+        // ===== 司機導航按鈕事件綁定 =====
+        document.querySelectorAll('.driver-nav button').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.driver-nav button').forEach(function(b) { b.classList.remove('active'); });
+                this.classList.add('active');
+                var page = this.dataset.driverPage;
+                document.querySelector('#page-driver .driver-container').style.display = 'none';
+                document.getElementById('driverRoutePage').style.display = 'none';
+                document.getElementById('driverMsgPage').style.display = 'none';
+                if (page === 'map' || page === 'home') { 
+                    document.querySelector('#page-driver .driver-container').style.display = 'flex'; 
+                    setTimeout(function() { if (driverMap) driverMap.invalidateSize(); }, 200);
+                } else if (page === 'route') { 
+                    document.getElementById('driverRoutePage').style.display = 'flex'; 
+                } else if (page === 'msg') { 
+                    document.getElementById('driverMsgPage').style.display = 'block'; 
+                }
+            });
+        });
+        
+        // ===== 全螢幕切換 =====
+        document.getElementById('passengerFullscreen').addEventListener('click', function() {
+            var top = document.querySelector('#page-passenger .top-bar');
+            var status = document.querySelector('#page-passenger .driver-status-display');
+            var seatInfo = document.querySelector('#page-passenger .seat-info-display');
+            var locBar = document.querySelector('#page-passenger .location-share-bar');
+            var distBar = document.querySelector('#page-passenger .driver-distance-bar');
+            var bottom = document.querySelector('#page-passenger .bottom-panel');
+            
+            if (!isFullScreen) {
+                top.style.display = 'none'; status.style.display = 'none'; seatInfo.style.display = 'none'; locBar.style.display = 'none'; distBar.style.display = 'none'; bottom.style.display = 'none';
+                this.innerHTML = '🏠 返回主頁';
+                isFullScreen = true;
+                setTimeout(function() { if (passengerMap) passengerMap.invalidateSize(); }, 300);
+            } else {
+                top.style.display = 'flex'; status.style.display = 'flex'; seatInfo.style.display = 'flex'; locBar.style.display = 'flex'; distBar.style.display = 'flex'; bottom.style.display = 'flex';
+                this.innerHTML = '⛶ 全螢幕';
+                isFullScreen = false;
+                setTimeout(function() { if (passengerMap) passengerMap.invalidateSize(); }, 300);
+            }
+        });
+        
+        // ===== 初始化Zello PTT對講 =====
+        setTimeout(function() {
+            try {
+                initMicrophone();
+                listenForVoiceMessages();
+                console.log('✅ Zello PTT對講已初始化');
+            } catch(e) {
+                console.error('❌ Zello PTT初始化失敗:', e);
+            }
+        }, 3000);
+        
+        // ===== 啟動司機位置同步 =====
+        startPassengerDriverLocationSync();
+        
+        // ===== 5秒後檢查是否顯示贊助懸浮按鈕 =====
+        setTimeout(function() {
+            var banner = document.getElementById('coffeeBanner');
+            if (banner.style.display === 'none') {
+                document.getElementById('coffeeFloatBtn').classList.add('show');
+            }
+        }, 5000);
+        
+        console.log('✅ 紅van通完整整合版初始化完成');
+    }
+
+    // ===== 啟動 =====
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', safeInit);
+    } else {
+        safeInit();
+    }
+    
+    console.log('🎉 紅van通完整整合版已加載！');
+    console.log('📅 當前時間：2026年05月28日');
+    console.log('☕ 贊助支援：轉數快 95294026（請大輝飲杯咖啡）');
+    </script>
+</body>
+</html>
